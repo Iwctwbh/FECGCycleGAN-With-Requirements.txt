@@ -5,7 +5,6 @@ from Utils.TrainUtils import TrainUtils
 from deeplearning.CycleGAN import CycleGAN
 
 
-
 class TestCycleGAN(TestCase):
 
     def __init__(self, methodName: str = ...) -> None:
@@ -23,4 +22,3 @@ class TestCycleGAN(TestCase):
 
         cycleGAN = CycleGAN(Y_train.shape[1], Y_train.shape[2])
         cycleGAN.train(x_train=X_train, y_train=Y_train, epochs=5)
-

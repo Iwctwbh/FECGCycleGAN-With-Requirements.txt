@@ -5,17 +5,17 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import keras.backend as K
-from keras import Input, Model
-from keras.layers import Conv1D, UpSampling1D, LeakyReLU, Dropout, Lambda, Embedding, Bidirectional, LSTM, Dense, Flatten, Layer, MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D
-from keras.optimizers import Nadam
+import tensorflow.keras.backend as K
+from tensorflow.python.keras import Input, Model
+from tensorflow.python.keras.layers import Conv1D, UpSampling1D, LeakyReLU, Dropout, Lambda, Embedding, Bidirectional, LSTM, Dense, Flatten, Layer, MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D
+from tensorflow.keras.optimizers import Nadam
 from keras_contrib.layers import InstanceNormalization
-from keras_self_attention import ScaledDotProductAttention
-from keras_self_attention.backend import regularizers
+# from keras_self_attention import ScaledDotProductAttention
+# from keras_self_attention.backend import regularizers
 from sklearn.preprocessing import scale
 
 import tensorflow as tf
-from tensorflow.python.keras import Sequential
+# from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import Normalization
 
 from Utils.DataUtils import DataUtils
@@ -33,6 +33,15 @@ class TransformerBlock(Layer):
         self.dropout1 = Dropout(rate)
         # self.dropout2 = Dropout(rate)
 
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'att': self.att,
+            'layernorm1': self.layernorm1,
+            'dropout1': self.dropout1
+        })
+        return config
+
     def call(self, inputs):
         attn_output = self.att(inputs, inputs)
         attn_output = self.dropout1(attn_output)
@@ -44,6 +53,9 @@ class TransformerBlock(Layer):
 
 class CycleGAN:
     def __init__(self, row, col):
+        # cpu = tf.config.list_physical_devices("CPU")
+        # tf.config.set_visible_devices(cpu)
+        # print(tf.config.list_logical_devices())
         gpus = tf.config.experimental.list_physical_devices('GPU')
         if gpus:
             try:
@@ -136,6 +148,28 @@ class CycleGAN:
                                             self.lambda_id, self.lambda_id],
                               optimizer=optimizer)
 
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'dataUtils': self.dataUtils,
+            'img_rows': self.img_rows,
+            'img_cols': self.img_cols,
+            'channels': self.channels,
+            'img_shape': self.img_shape,
+            'dataset_name': self.dataset_name,
+            'disc_patch': self.disc_patch,
+            'gf': self.gf,
+            'df': self.df,
+            'lambda_cycle': self.lambda_cycle,
+            'lambda_id': self.lambda_id,
+            'd_A': self.d_A,
+            'd_B': self.d_B,
+            'g_AB': self.g_AB,
+            'g_BA': self.g_BA,
+            'combined': self.combined
+        })
+        return config
+
     # Define custom loss
     def custom_loss(self):
 
@@ -156,13 +190,12 @@ class CycleGAN:
             return d
 
         def multiply(x):
-            mask,image  = x
-            return image* K.clip(mask,0.8,1)
+            mask, image = x
+            return image * K.clip(mask, 0.8, 1)
 
         input = Input(shape=self.img_shape)
 
         value = conv1DWithSINE(input, 1, f_size=30)
-
 
         att = TransformerBlock(200, 2)(value)
         att = Normalization(axis=1)(att)
@@ -180,7 +213,7 @@ class CycleGAN:
 
         def d_layer(layer_input, filters, f_size=4, normalization=True):
             """Discriminator layer"""
-            d = Conv1D(filters, kernel_size=f_size, padding='same',activation=tf.math.sin)(layer_input)
+            d = Conv1D(filters, kernel_size=f_size, padding='same', activation=tf.math.sin)(layer_input)
             if normalization:
                 d = InstanceNormalization()(d)
             return d
@@ -191,7 +224,6 @@ class CycleGAN:
         d2 = d_layer(d1, 7)
         d3 = d_layer(d2, 3)
         validity = d_layer(d3, 1)
-
 
         return Model(img, validity)
 
@@ -256,8 +288,8 @@ class CycleGAN:
                 # If at save interval => save generated image samples
                 if batch_i % sample_interval == 0:
                     self.sample_images(epoch, batch_i, imgs_A, imgs_B)
-        self.g_AB.save("ECG2FECG.h5", overwrite=True)
-        self.g_BA.save("FECG2ECG.h5", overwrite=True)
+        self.g_AB.save("ECG2FECG.h5", overwrite=True, save_format='h5')
+        self.g_BA.save("FECG2ECG.h5", overwrite=True, save_format='h5')
 
     def sample_images(self, epoch, batch_i, imgs_A, imgs_B):
         os.makedirs('images/%s' % self.dataset_name, exist_ok=True)

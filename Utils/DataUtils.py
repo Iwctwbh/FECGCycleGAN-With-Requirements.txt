@@ -13,7 +13,7 @@ class DataUtils:
         super().__init__()
         self.fileNames = ["r01.edf", "r04.edf", "r07.edf", "r08.edf", "r10.edf"]
 
-    def readData(self, sigNum, path="E:\\Workspaces\\ECG2FetalCycleGAN\\abdominal-and-direct-fetal-ecg-database-1.0.0\\"):
+    def readData(self, sigNum, path="..\\abdominal-and-direct-fetal-ecg-database-1.0.0\\"):
         file_name = path + self.fileNames[sigNum]
         f = pyedflib.EdfReader(file_name)
         n = f.signals_in_file
